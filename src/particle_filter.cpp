@@ -54,16 +54,12 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 
 	default_random_engine gen;
 
-	normal_distribution<double> noise_x(0,std_pos[0]);
-	normal_distribution<double> noise_y(0,std_pos[1]);
-	normal_distribution<double> noise_theta(0, std_pos[2]);
 
-	
 	for (int i=0;i<particles.size();i++)
 	{
 		double theta_temp = particles[i].theta;
-
-		if (fabs(yaw_rate) < 0.0001){
+		
+		if (yaw_rate == 0){
 			particles[i].x += velocity*delta_t*cos(theta_temp);
 			particles[i].y += velocity*delta_t*sin(theta_temp);
 		}
@@ -72,13 +68,14 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 			particles[i].y += velocity*(cos(theta_temp) - cos(theta_temp+yaw_rate*delta_t))/yaw_rate;
 			particles[i].theta += yaw_rate*delta_t;
 		}
+
+		normal_distribution<double> noise_x(particles[i].x,std_pos[0]);
+		normal_distribution<double> noise_y(particles[i].y,std_pos[1]);
+		normal_distribution<double> noise_theta(particles[i].theta, std_pos[2]);
+		
 		particles[i].x += noise_x(gen);
 		particles[i].y += noise_y(gen);
 		particles[i].theta += noise_theta(gen);
-
-		cout <<particles[i].x <<endl;
-		cout <<particles[i].y <<endl;
-		cout <<particles[i].theta <<endl;
 	}
 
 
