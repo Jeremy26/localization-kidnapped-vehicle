@@ -29,14 +29,17 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	normal_distribution<double> dist_x(x, std[0]);
 	normal_distribution<double> dist_y(y, std[1]);
 	normal_distribution<double> dist_theta(theta, std[2]);
-	particles.resize(num_particles);
 
-	for (int i = 0; i<particles.size();i++)
+	for (int i = 0; i<num_particles;i++)
 	{
-		particles[i].x = dist_x(gen);
-		particles[i].y = dist_y(gen);
-		particles[i].theta = dist_theta(gen);
-		particles[i].weight = 1;
+		Particle particle;
+		particle.id = i;
+		particle.x = dist_x(gen);
+		particle.y = dist_y(gen);
+		particle.theta = dist_theta(gen);
+		particle.weight = 1;
+		particles.push_back(particle);
+		weights.push_back(1);
 	}
 	is_initialized = true;
 
@@ -72,7 +75,12 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		particles[i].x += noise_x(gen);
 		particles[i].y += noise_y(gen);
 		particles[i].theta += noise_theta(gen);
+
+		cout <<particles[i].x <<endl;
+		cout <<particles[i].y <<endl;
+		cout <<particles[i].theta <<endl;
 	}
+
 
 }
 
@@ -89,7 +97,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 		particles[i].y = predicted.y + sin(theta_temp)*observations.x - cos(theta_temp)*observations.y;
 	}
 	*/
-	
+
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
