@@ -21,9 +21,25 @@ using namespace std;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
-	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
+	//   x, y, theta and their uncertainties from GPS) and all weights to 1.
+	num_particles = 100;
+	
+	default_random_engine gen;
 	// Add random Gaussian noise to each particle.
-	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
+	normal_distribution<double> dist_x(x, std[0]);
+	normal_distribution<double> dist_y(y, std[1]);
+	normal_distribution<double> dist_theta(theta, std[2]);
+	particles.resize(num_particles);
+
+	for (int i = 0; i<particles.size();i++)
+	{
+		particles[i].x = dist_x(gen);
+		particles[i].y = dist_y(gen);
+		particles[i].theta = dist_theta(gen);
+		particles[i].weight = 1;
+	}
+	is_initialized = true;
+
 
 }
 
@@ -32,6 +48,33 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
+
+	default_random_engine gen;
+
+	normal_distribution<double> noise_x(0,std_pos[0]);
+	normal_distribution<double> noise_y(0,std_pos[1]);
+	normal_distribution<double> noise_theta(0, std_pos[2]);
+
+	
+	for (int i=0;i<particles.size();i++)
+	{
+		double x_temp = particles[i].x;
+		double y_temp = particles[i].y;
+		double theta_temp = particles[i].theta;
+
+		if (fabs(yaw_rate) < 0.0001){
+			particles[i].x += velocity*delta_t*cos(theta_temp);
+			particles[i].y += velocity*delta_t*sin(theta_temp);
+		}
+		else {
+			particles[i].x += velocity*(sin(theta_temp + delta_t*yaw_rate) - sin(theta_temp))/yaw_rate;
+			particles[i].y += velocity*(cos(theta_temp) - cos(theta_temp+yaw_rate*delta_t))/yaw_rate;
+			particles[i].theta += yaw_rate*delta_t;
+		}
+		particles[i].x += noise_x(gen);
+		particles[i].y += noise_y(gen);
+		particles[i].theta += noise_theta(gen);
+	}
 
 }
 
