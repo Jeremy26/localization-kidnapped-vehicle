@@ -58,7 +58,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	for (int i=0;i<particles.size();i++)
 	{
 		double theta_temp = particles[i].theta;
-		
+
 		if (yaw_rate == 0){
 			particles[i].x += velocity*delta_t*cos(theta_temp);
 			particles[i].y += velocity*delta_t*sin(theta_temp);
@@ -87,11 +87,16 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
 	/*
-	for (int i =0; i<particles.size();i++)
+	vector<LandmarkObs> trans_observations;
+	LandmarkObs obs;
+	for (int i =0; i<observations.size();i++)
 	{
+		LandmarkObs trans_obs;
+		obs = observations[i];
 		double theta_temp = particles[i].theta;
-		particles[i].x = predicted.x + cos (theta_temp)*observations.x - sin(theta_temp)*observations.y;
-		particles[i].y = predicted.y + sin(theta_temp)*observations.x - cos(theta_temp)*observations.y;
+		trans_obs.x = particles[i].x + cos (theta_temp)*obs.x - sin(theta_temp)*obs.y;
+		trans_obs.y = particles[i].y + sin(theta_temp)*obs.x - cos(theta_temp)*obs.y;
+		observations.push_pack(obs);
 	}
 	*/
 
@@ -115,7 +120,16 @@ void ParticleFilter::resample() {
 	// TODO: Resample particles with replacement with probability proportional to their weight. 
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+	default_random_engine gen;
+	discrete_distribution<int> distribution(weights.begin(),weights.end());
 
+	vector<Paticle> resample_particles;
+
+	for(int i=0; i<num_particles;i++)
+	{
+		resample_particles.push_back(particles[distribution(gen)]);
+	}
+	particles = resample_particles;
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
