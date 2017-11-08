@@ -54,7 +54,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 
 	default_random_engine gen;
 
-
 	for (int i=0;i<particles.size();i++)
 	{
 		double theta_temp = particles[i].theta;
@@ -78,7 +77,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		particles[i].theta += noise_theta(gen);
 	}
 
-
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
@@ -86,25 +84,25 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
-	/*
-	vector<LandmarkObs> trans_observations;
-	LandmarkObs obs;
-	for (int i =0; i<observations.size();i++)
-	{
-		LandmarkObs trans_obs;
-		obs = observations[i];
-		double theta_temp = particles[i].theta;
-		trans_obs.x = particles[i].x + cos (theta_temp)*obs.x - sin(theta_temp)*obs.y;
-		trans_obs.y = particles[i].y + sin(theta_temp)*obs.x - cos(theta_temp)*obs.y;
-		observations.push_pack(obs);
-	}
-	*/
 
+	//## FOR EACH LANDMARK, GO THROUGH AND FIND THE CLOSEST MEASUREMENT
+	
+	double min_dist = 1000000; // We set up a high initial distance
+
+	// Take the closest distance between measurements and observations and define observation id to be map id
+	for (int i=0; i<predicted.size();i++){
+		for (int j = 0; j<observations.size();j++)
+		{
+			if (dist(observations[j].x, observations[j].y, predicted[i].x, predicted[i].y) < min_dist)
+			observations[j].id = predicted[i].id;
+		}
+	}
 }
+
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
 		const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
-	// TODO: Update the weights of each particle using a mult-variate Gaussian distribution. You can read
+	// TODO: Update the weights of each particle using a multi-variate Gaussian distribution. You can read
 	//   more about this distribution here: https://en.wikipedia.org/wiki/Multivariate_normal_distribution
 	// NOTE: The observations are given in the VEHICLE'S coordinate system. Your particles are located
 	//   according to the MAP'S coordinate system. You will need to transform between the two systems.
@@ -114,6 +112,73 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+	for (int p=0; p<num_particles;p++){
+		//############# STEP 1 : MATCH MAP LANDMARKS AND OBSERVATIONS COORDINATES  #############
+		/*
+		Our goal here is to arrive at step 2 : NEAREST NEIGHBOR
+		That step will call the above DataAssociation function that takes in 2 LandmarkObs vectors.
+		We take the map landmark observations and "cast" them into the LandmarkObs vector predictions we just created.
+
+		Since the Map coordinates here are the reference coordinate, no need for any transformation
+		*/
+		vector<LandmarkObs> actual_landmarks; // Vector of LandmarksObs
+
+		for(int i=0; i<map_landmarks.landmark_list.size();i++)
+		{
+			int landmark_id = map_landmarks.landmark_list[i].id_i;
+			float landmark_x = map_landmarks.landmark_list[i].x_f;
+			float landmark_y = map_landmarks.landmark_list[i].y_f;
+			
+			LandmarkObs land;
+			land.x = landmark_x;
+			land.y = landmark_y;
+			land.id = landmark_id;
+			actual_landmarks.push_back(land);
+		}
+
+		/*
+		We now have one element ready for the dataAssociation function that takes in map landmarks and observations.
+		Observations sent to that function will be subject to transformations. We do rotations and translations according to the course to do so.
+		We iterate for each observation and do the transformation to have a vector of transformed observations.
+		*/
+		LandmarkObs obs, trans_obs; // Current observation and transformed observation
+		vector<LandmarkObs> transformed_observations; // Vector for all transformed observations
+
+		for (int i =0; i<observations.size();i++)
+		{
+			obs = observations[i];
+			double theta_temp = particles[p].theta;
+			trans_obs.x = particles[p].x + cos (theta_temp)*obs.x - sin(theta_temp)*obs.y;
+			trans_obs.y = particles[p].y + sin(theta_temp)*obs.x - cos(theta_temp)*obs.y;
+			transformed_observations.push_back(trans_obs);
+		}
+
+		// WE NOW HAVE 2 VECTOR OF LANDMARK OBS CONTAINING OBSERVATIONS AND ACTUAL MAP LANDMARKS
+		//############# STEP 2 : NEAREST NEIGHBOR TECHNIQUE  #############
+		
+		dataAssociation(actual_landmarks,transformed_observations);
+
+		// WE NOW HAVE OBSERVATIONS OF WHAT OUR LANDMARKS CAN BE		
+		//############# STEP 3 : WEIGHT UPDATES USING MULTIVARIATE GAUSSIAN DISTRIBUTION  #############
+		particles[p].weight = 1.0;
+		
+		for (int i =0; i<transformed_observations.size();i++)
+		{
+			double measured_x = transformed_observations[i].x;
+			double measured_y = transformed_observations[i].y;
+			double mu_x = map_landmarks.landmark_list[i].x_f;
+			double mu_y = map_landmarks.landmark_list[i].y_f;
+			double normalizer = 1/(2*M_PI*std_landmark[0]*std_landmark[1]);
+			double exponent = pow(measured_x - mu_x,2)/(2*pow(std_landmark[0],2)) + pow(measured_y - mu_y,2)/(2*pow(std_landmark[1],2));
+			double multiplier = normalizer*exp(-exponent);
+			if (multiplier >0)
+			{
+				particles[p].weight *= multiplier;
+			}
+		}
+		weights[p] = particles[p].weight;
+	}
 }
 
 void ParticleFilter::resample() {
@@ -123,7 +188,7 @@ void ParticleFilter::resample() {
 	default_random_engine gen;
 	discrete_distribution<int> distribution(weights.begin(),weights.end());
 
-	vector<Paticle> resample_particles;
+	vector<Particle> resample_particles;
 
 	for(int i=0; i<num_particles;i++)
 	{
