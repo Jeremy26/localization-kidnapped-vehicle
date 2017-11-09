@@ -22,7 +22,7 @@ using namespace std;
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1.
-	num_particles = 100;
+	num_particles = 15;
 	cout<<"INIT"<<endl;
 	
 	default_random_engine gen;
@@ -38,7 +38,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 		particle.x = dist_x(gen);
 		particle.y = dist_y(gen);
 		particle.theta = dist_theta(gen);
-		particle.weight = 1;
+		particle.weight = 1.0;
 		particles.push_back(particle);
 		weights.push_back(1);
 
@@ -78,6 +78,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		particles[i].y += noise_y(gen);
 		particles[i].theta += noise_theta(gen);
 		
+		// THETA NORMALIZATION ???
 		cout<<"["<<particles[i].x<<" ;"<<particles[i].y<<" ;"<<particles[i].theta<<" ;"<<particles[i].weight<<" ]"<<endl;
 		
 	}
@@ -98,10 +99,29 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	for (int i=0; i<predicted.size();i++){
 		for (int j = 0; j<observations.size();j++)
 		{
-			if (dist(observations[j].x, observations[j].y, predicted[i].x, predicted[i].y) < min_dist)
-			observations[j].id = predicted[i].id;
+			double distance = dist(observations[j].x, observations[j].y, predicted[i].x, predicted[i].y);
+			if (distance < min_dist)
+			{
+				min_dist = distance;
+				observations[j].id = predicted[i].id;
+				//observations[j].id = i ;
+			}
+
 		}
 	}
+	
+/*	for(int i =0; i<observations.size();i++)
+	{
+		for(int j=0; j<predicted.size();j++){
+			dist = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
+			if (dist < min_dist)
+			{
+				min_dist = dist;
+				observations[i].id = predicted[i].id;
+			}
+		}
+	}
+	*/
 }
 
 
@@ -156,7 +176,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			obs = observations[i];
 			double theta_temp = particles[p].theta;
 			trans_obs.x = particles[p].x + cos (theta_temp)*obs.x - sin(theta_temp)*obs.y;
-			trans_obs.y = particles[p].y + sin(theta_temp)*obs.x - cos(theta_temp)*obs.y;
+			trans_obs.y = particles[p].y + sin(theta_temp)*obs.x + cos(theta_temp)*obs.y;
 			transformed_observations.push_back(trans_obs);
 		}
 
@@ -190,7 +210,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			sense_x.push_back(transformed_observations[i].x);
 			sense_y.push_back(transformed_observations[i].y);
 		}
-		SetAssociations(particles[p], associations,sense_x,sense_y);
+		particles[p] = SetAssociations(particles[p], associations,sense_x,sense_y);
 		
 		weights[p] = particles[p].weight;
 		cout<<"["<<particles[p].x<<" ;"<<particles[p].y<<" ;"<<particles[p].theta<<" ;"<<particles[p].weight<<" ]"<<endl;
