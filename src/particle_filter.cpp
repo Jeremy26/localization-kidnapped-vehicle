@@ -23,13 +23,14 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1.
 	num_particles = 100;
+	cout<<"INIT"<<endl;
 	
 	default_random_engine gen;
 	// Add random Gaussian noise to each particle.
 	normal_distribution<double> dist_x(x, std[0]);
 	normal_distribution<double> dist_y(y, std[1]);
 	normal_distribution<double> dist_theta(theta, std[2]);
-
+	
 	for (int i = 0; i<num_particles;i++)
 	{
 		Particle particle;
@@ -40,10 +41,10 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 		particle.weight = 1;
 		particles.push_back(particle);
 		weights.push_back(1);
+
+		cout<<"["<<particle.x<<" ;"<<particle.y<<" ;"<<particle.theta<<" ;"<<particle.weight<<" ]"<<endl;
 	}
 	is_initialized = true;
-
-
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
@@ -53,7 +54,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
 
 	default_random_engine gen;
-
+	cout<<"PREDICT"<<endl;
+	
 	for (int i=0;i<particles.size();i++)
 	{
 		double theta_temp = particles[i].theta;
@@ -75,6 +77,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		particles[i].x += noise_x(gen);
 		particles[i].y += noise_y(gen);
 		particles[i].theta += noise_theta(gen);
+		
+		cout<<"["<<particles[i].x<<" ;"<<particles[i].y<<" ;"<<particles[i].theta<<" ;"<<particles[i].weight<<" ]"<<endl;
+		
 	}
 
 }
@@ -112,7 +117,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
-
+	cout<<"UPDATE"<<endl;
+	
 	for (int p=0; p<num_particles;p++){
 		//############# STEP 1 : MATCH MAP LANDMARKS AND OBSERVATIONS COORDINATES  #############
 		/*
@@ -162,6 +168,10 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		// WE NOW HAVE OBSERVATIONS OF WHAT OUR LANDMARKS CAN BE		
 		//############# STEP 3 : WEIGHT UPDATES USING MULTIVARIATE GAUSSIAN DISTRIBUTION  #############
 		particles[p].weight = 1.0;
+	  	
+	  	vector<int> associations;
+	  	vector<double> sense_x;
+	  	vector<double> sense_y;
 		
 		for (int i =0; i<transformed_observations.size();i++)
 		{
@@ -176,8 +186,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			{
 				particles[p].weight *= multiplier;
 			}
+			associations.push_back(transformed_observations[i].id);
+			sense_x.push_back(transformed_observations[i].x);
+			sense_y.push_back(transformed_observations[i].y);
 		}
+		SetAssociations(particles[p], associations,sense_x,sense_y);
+		
 		weights[p] = particles[p].weight;
+		cout<<"["<<particles[p].x<<" ;"<<particles[p].y<<" ;"<<particles[p].theta<<" ;"<<particles[p].weight<<" ]"<<endl;
+		
 	}
 }
 
