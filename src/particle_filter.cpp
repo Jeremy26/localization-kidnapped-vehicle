@@ -84,24 +84,21 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
 
-	//## FOR EACH LANDMARK, GO THROUGH observations AND FIND THE CLOSEST MEASUREMENT
-
 	// Take the closest distance between measurements and observations and define observation id to be map id
-	for (int i=0; i<predicted.size();i++){
+	for (int i=0; i<observations.size();i++){
 		double min_dist = 1000000.0; // We set up a high initial distance
 		double distance = 0.0;
-		for (int j = 0; j<observations.size();j++)
+		for (int j = 0; j<predicted.size();j++)
 		{
-			distance = dist(observations[j].x, observations[j].y, predicted[i].x, predicted[i].y);
+			distance = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
 			if (distance < min_dist)
 			{
 				min_dist = distance;
-				observations[j].id = predicted[i].id;
+				observations[i].id = predicted[j].id;
 			}
 		}
 	}
 }
-
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
 		const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
@@ -177,30 +174,26 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		for (int i =0; i<transformed_observations.size();i++)
 		{
 			for (int j=0; j<actual_landmarks.size();j++)
-				{
-				if(transformed_observations[i].id == actual_landmarks[j].id)
-				{
-					double measured_x = transformed_observations[i].x; //particle direction x in the good coordinates
-					double measured_y = transformed_observations[i].y; // particle direction y in the good coordinates
-					double measured_id = transformed_observations[i].id; // particle id
-					double mu_x = actual_landmarks[j].x; // Landmark x
-					double mu_y = actual_landmarks[j].y; // Landmark y
-
-					normalizer = 1/(2*M_PI*std_landmark[0]*std_landmark[1]);
-					exponent = pow(measured_x - mu_x,2)/(2*pow(std_landmark[0],2)) + pow(measured_y - mu_y,2)/(2*pow(std_landmark[1],2));
-					multiplier = normalizer*exp(-exponent);
-					//Multiplying a weight by 0 doesn't really make sense					
-					if (multiplier >0.0)
-					{
-						particles[p].weight *= multiplier;
-					}
-					//We update our associations
-					associations.push_back(transformed_observations[i].id);
-					sense_x.push_back(transformed_observations[i].x);
-					sense_y.push_back(transformed_observations[i].y);
-				}
+ 			{
+ 				if(transformed_observations[i].id == actual_landmarks[j].id) // condition to have the right mu
+ 				{
+ 					double measured_x = transformed_observations[i].x; //particle direction x in the good coordinates
+ 					double measured_y = transformed_observations[i].y; // particle direction y in the good coordinates
+ 					double measured_id = transformed_observations[i].id; // particle id
+ 					double mu_x = actual_landmarks[j].x; // Landmark x
+ 					double mu_y = actual_landmarks[j].y; // Landmark y
+ 					normalizer = 1/(2*M_PI*std_landmark[0]*std_landmark[1]);
+ 					exponent = pow(measured_x - mu_x,2)/(2*pow(std_landmark[0],2)) + pow(measured_y - mu_y,2)/(2*pow(std_landmark[1],2));
+ 					multiplier = normalizer*exp(-exponent);
+ 					if (multiplier >0.0)
+ 					{
+ 						particles[p].weight *= multiplier;
+ 					}
+ 					associations.push_back(transformed_observations[i].id);
+ 					sense_x.push_back(transformed_observations[i].x);
+ 					sense_y.push_back(transformed_observations[i].y);
+ 				}
 			}
-
 		}
 		particles[p] = SetAssociations(particles[p], associations,sense_x,sense_y);
 		weights[p] = particles[p].weight;
