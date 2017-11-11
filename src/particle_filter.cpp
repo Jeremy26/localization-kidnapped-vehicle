@@ -22,7 +22,7 @@ using namespace std;
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1.
-	num_particles = 15;
+	num_particles = 100;
 	cout<<"INITIALIZATION"<<endl;
 	
 	default_random_engine gen;
@@ -79,7 +79,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 		particles[i].y = N_y(gen);
 		particles[i].theta = N_t(gen);
 		
-		printParticles(particles[i]);	
+	//	printParticles(particles[i]);	
 	}
 
 }
@@ -183,7 +183,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			double theta_temp = particles[p].theta;
 			trans_obs.x = particles[p].x + cos(theta_temp)*obs.x - sin(theta_temp)*obs.y;
 			trans_obs.y = particles[p].y + sin(theta_temp)*obs.x + cos(theta_temp)*obs.y;
-			trans_obs.id = 0;
 			transformed_observations.push_back(trans_obs);
 		//	cout<<"TRANSFORMED X "<<trans_obs.x<<endl;
 		//	cout<<"TRANSFORMED Y "<<trans_obs.y<<endl;
@@ -209,31 +208,38 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		double multiplier, normalizer, exponent;
 		for (int i =0; i<transformed_observations.size();i++)
 		{
-			double measured_x = transformed_observations[i].x; //particle direction x in the good coordinates
-			double measured_y = transformed_observations[i].y; // particle direction y in the good coordinates
-			double measured_id = transformed_observations[i].id; // particle id
-			double mu_x = map_landmarks.landmark_list[measured_id].x_f; // Landmark x
-			double mu_y = map_landmarks.landmark_list[measured_id].y_f; // Landmark y
-		//	cout<<"Measured X "<<measured_x<<" Mu_x "<<mu_x<<endl;
-		//	cout<<"Measured Y "<<measured_y<<" Mu_y "<<mu_y<<endl;
-		//	cout<<"Measured ID "<<measured_id<<endl;
-			normalizer = 1/(2*M_PI*std_landmark[0]*std_landmark[1]);
-			exponent = pow(measured_x - mu_x,2)/(2*pow(std_landmark[0],2)) + pow(measured_y - mu_y,2)/(2*pow(std_landmark[1],2));
-			multiplier = normalizer*exp(-exponent);
-		//	cout<<"MULTIPLIER "<<multiplier<<endl;
-		//	cout<<"NORMALIZER "<<normalizer<<endl;
-		//	cout<<"EXPONENT "<<exponent<<endl;
-			
-			if (multiplier >0.0)
-			{
-				particles[p].weight *= multiplier;
+			for (int j=0; j<actual_landmarks.size();j++)
+				{
+				if(transformed_observations[i].id == actual_landmarks[j].id)
+				{
+					double measured_x = transformed_observations[i].x; //particle direction x in the good coordinates
+					double measured_y = transformed_observations[i].y; // particle direction y in the good coordinates
+					double measured_id = transformed_observations[i].id; // particle id
+					double mu_x = actual_landmarks[j].x; // Landmark x
+					double mu_y = actual_landmarks[j].y; // Landmark y
+				//	cout<<"Measured X "<<measured_x<<" Mu_x "<<mu_x<<endl;
+				//	cout<<"Measured Y "<<measured_y<<" Mu_y "<<mu_y<<endl;
+				//	cout<<"Measured ID "<<measured_id<<endl;
+					normalizer = 1/(2*M_PI*std_landmark[0]*std_landmark[1]);
+					exponent = pow(measured_x - mu_x,2)/(2*pow(std_landmark[0],2)) + pow(measured_y - mu_y,2)/(2*pow(std_landmark[1],2));
+					multiplier = normalizer*exp(-exponent);
+				//	cout<<"MULTIPLIER "<<multiplier<<endl;
+				//	cout<<"NORMALIZER "<<normalizer<<endl;
+				//	cout<<"EXPONENT "<<exponent<<endl;
+					
+					if (multiplier >0.0)
+					{
+						particles[p].weight *= multiplier;
+					}
+					associations.push_back(transformed_observations[i].id);
+					sense_x.push_back(transformed_observations[i].x);
+					sense_y.push_back(transformed_observations[i].y);
+				}
 			}
-			associations.push_back(transformed_observations[i].id);
-			sense_x.push_back(transformed_observations[i].x);
-			sense_y.push_back(transformed_observations[i].y);
+
 		}
 		particles[p] = SetAssociations(particles[p], associations,sense_x,sense_y);
-		printParticles(particles[p]);
+	//	printParticles(particles[p]);
 		weights[p] = particles[p].weight;
 	}
 
