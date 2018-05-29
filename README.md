@@ -1,11 +1,7 @@
 # Overview
 This repository contains all the code needed to complete the final project for the Localization course in Udacity's Self-Driving Car Nanodegree.
 
-[//]: # (Image References)
-
-[image0]: /success.png "Success"
-
-![image0][image0]
+[![VIDEO](localization_vid.png)](https://www.youtube.com/watch?v=23xhAkV7vgA "Particle Filter")
 
 
 #### Submission
